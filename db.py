@@ -56,7 +56,7 @@ async def create_giveaway(db: asyncpg.pool.Pool, id: int, ctx: commands.Context,
     
     :param db: The database object
     :param id: The id of the giveaway, can be fetched with `get_next_id`
-    :param ctx: Context of the message, used to obatin `message_id` and `channel_id`
+    :param ctx: Context of the giveaway message, used to obatin `message_id` and `channel_id`
     :param length: How long should the giveaway last for (in seconds)
     :param prize_name: The name of the prize
     :param winner_count: How many winner should there be
@@ -115,7 +115,7 @@ async def roll_winner(db: asyncpg.pool.Pool, id: int):
     query = """
     SELECT participants, winner_count FROM giveaways WHERE id=$1
     """
-    res = await db.fetch(query)
+    res = await db.fetch(query, id)
     participants = res[0]['participants']
     winner_count = res[0]['winnter_count']
     winners = random.choices(participants, k=winner_count)
@@ -144,4 +144,3 @@ async def get_need_rolling_giveaways(db: asyncpg.pool.Pool):
         else:
             ret.append(i['id'])
     return ret
-
