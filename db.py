@@ -34,8 +34,8 @@ async def ensure_database_validity(db: asyncpg.pool.Pool):
         winner_count int           not null,
         prize_name   text          not null,
         requirements bigint[],
-        participants  bigint[],
-        winners       bigint[]
+        participants bigint[],
+        winners      bigint[]
     );
     """
     await db.execute(query)
@@ -166,16 +166,16 @@ async def get_need_rolling_giveaways(db: asyncpg.pool.Pool):
     return ret
 
 
-async def get_message_info_of_giveaway(db: asyncpg.pool.Pool, id: int):
+async def get_info_of_giveaway(db: asyncpg.pool.Pool, id: int):
     """
-    Fetches the message ID and the channel ID of the giveaway
+    Fetches all informations stored in the database of the giveaway
 
     :param db: The database object
     :param id: The giveaway ID
-    :return: dict which contains {'channel':<The giveaway's channel ID>, 'message':<The giveaway's message ID>}
+    :return: A dict that contains all informations stored in the database about the giveaway
     """
     query = """
-    SELECT message_id, channel_id FROM giveaways WHERE id=$1
+    SELECT * FROM giveaways WHERE id=$1
     """
     res = await db.fetch(query, id)
-    return {'channel': res[0]['channel_id'], 'message': res[0]['message_id']}
+    return dict(res[0])
