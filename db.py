@@ -124,7 +124,7 @@ async def roll_winner(db: asyncpg.pool.Pool, id: int):
         # We dont have to roll it because the participants are less than the winner count, all participants are now winners
         winners = participants
     else:
-        winners = random.choices(participants, k=winner_count)
+        winners = random.sample(participants, winner_count)
     query = """
     UPDATE giveaways SET winners=$1 WHERE id=$2
     """
