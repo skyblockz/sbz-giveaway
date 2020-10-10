@@ -61,29 +61,33 @@ async def get_next_id(db: asyncpg.pool.Pool):
 
 
 async def create_giveaway(db: asyncpg.pool.Pool, id: int, ctx: commands.Context, length: int, prize_name: str,
+                          host: str,
                           winner_count: int = 1,
+                          image: str = None,
                           requirements=None):
     """
     Create a new giveaway
-    
+
     :param db: The database object
     :param id: The id of the giveaway, can be fetched with `get_next_id`
     :param ctx: Context of the giveaway message, used to obatin `message_id` and `channel_id`
     :param length: How long should the giveaway last for (in seconds)
     :param prize_name: The name of the prize
+    :param host: The host of the giveaway
     :param winner_count: How many winner should there be
-    :param requirements: A list with all the roles that is allowed to participate in the giveaway
+    :param image: The image of the giveaway (Optional)
+    :param requirements: A list with all the roles that is allowed to participate in the giveaway (Optional)
     :return: None
     """
     if requirements is None:
         requirements = []
     query = """
     INSERT INTO giveaways 
-    (id, message_id, channel_id, created_at, length, winner_count, prize_name, requirements) VALUES 
+    (id, message_id, channel_id, created_at, length, winner_count, prize_name, image, host,requirements) VALUES 
     ($1, $2 ,$3, $4, $5, $6, $7, $8)
     """
     await db.execute(query, id, ctx.message.id, ctx.channel.id, int(time.time()), length, winner_count, prize_name,
-                     requirements)
+                     image, host, requirements)
 
 
 async def add_participant(db: asyncpg.pool.Pool, id: int, member: discord.Member):
