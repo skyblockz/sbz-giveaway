@@ -10,13 +10,12 @@ import db
 
 class SBZGiveawayBot(commands.Bot):
     def __init__(self, **options):
-        super().__init__(options)
+        super().__init__(**options)
         self.db = None
         self.loaded_db = False
 
 
 intents = discord.Intents.all()
-intents.presences = False
 logging.basicConfig(level=logging.INFO)
 bot = SBZGiveawayBot(command_prefix='g$', intents=intents)
 bot.load_extension('jishaku')
