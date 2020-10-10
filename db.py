@@ -33,6 +33,8 @@ async def ensure_database_validity(db: asyncpg.pool.Pool):
         length       bigint        not null,
         winner_count int           not null,
         prize_name   text          not null,
+        image        text,
+        host         text          not null,
         requirements bigint[],
         participants bigint[],
         winners      bigint[]
