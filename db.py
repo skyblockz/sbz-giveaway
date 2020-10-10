@@ -6,6 +6,16 @@ import discord
 from discord.ext import commands
 
 
+class NotEnoughParticipants(Exception):
+    def __init__(self):
+        super().__init__('Insufficient amount of participants have participated in this giveaway')
+
+
+class NoParticipants(Exception):
+    def __init__(self):
+        super().__init__('No participants have participated in this giveaway')
+
+
 async def ensure_database_validity(db: asyncpg.pool.Pool):
     """
     Ensures the database table is valid
@@ -112,6 +122,8 @@ async def roll_winner(db: asyncpg.pool.Pool, id: int):
     
     :param db: The database object
     :param id: The giveaway ID
+    :raises NotEnoughParticipants
+    :raises NoParticipant
     :return: The winner's ID
     """
     query = """
@@ -120,9 +132,10 @@ async def roll_winner(db: asyncpg.pool.Pool, id: int):
     res = await db.fetch(query, id)
     participants = res[0]['participants']
     winner_count = res[0]['winner_count']
+    if len(participants) == 0:
+        raise NoParticipants
     if len(participants) <= winner_count:
-        # We dont have to roll it because the participants are less than the winner count, all participants are now winners
-        winners = participants
+        raise NotEnoughParticipants
     else:
         winners = random.sample(participants, winner_count)
     query = """
