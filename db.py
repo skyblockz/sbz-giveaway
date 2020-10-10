@@ -117,7 +117,7 @@ async def roll_winner(db: asyncpg.pool.Pool, id: int):
     """
     res = await db.fetch(query, id)
     participants = res[0]['participants']
-    winner_count = res[0]['winnter_count']
+    winner_count = res[0]['winner_count']
     winners = random.choices(participants, k=winner_count)
     query = """
     UPDATE giveaways SET winners=$1 WHERE id=$2
