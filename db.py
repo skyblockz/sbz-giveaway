@@ -147,7 +147,7 @@ async def get_need_rolling_giveaways(db: asyncpg.pool.Pool):
     ret = []
     for i in res:
         if i['created_at'] + i['length'] < int(time.time()):
-            continue
-        else:
             ret.append(i['id'])
+        else:
+            continue
     return ret
