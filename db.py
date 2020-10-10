@@ -84,7 +84,7 @@ async def create_giveaway(db: asyncpg.pool.Pool, id: int, ctx: commands.Context,
     query = """
     INSERT INTO giveaways 
     (id, message_id, channel_id, created_at, length, winner_count, prize_name, image, host,requirements) VALUES 
-    ($1, $2 ,$3, $4, $5, $6, $7, $8)
+    ($1, $2 ,$3, $4, $5, $6, $7, $8, $9, $10)
     """
     await db.execute(query, id, ctx.message.id, ctx.channel.id, int(time.time()), length, winner_count, prize_name,
                      image, host, requirements)
