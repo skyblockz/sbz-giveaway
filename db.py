@@ -94,6 +94,8 @@ async def add_participant(db: asyncpg.pool.Pool, id: int, member: discord.Member
         if req in user_role_ids:
             qualified = True
             break
+    if len(reqs) == 0:
+        qualified = True
     if not qualified:
         return False
     query = """
