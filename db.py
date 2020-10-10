@@ -151,3 +151,18 @@ async def get_need_rolling_giveaways(db: asyncpg.pool.Pool):
         else:
             continue
     return ret
+
+
+async def get_message_info_of_giveaway(db: asyncpg.pool.Pool, id: int):
+    """
+    Fetches the message ID and the channel ID of the giveaway
+
+    :param db: The database object
+    :param id: The giveaway ID
+    :return: dict which contains {'channel':<The giveaway's channel ID>, 'message':<The giveaway's message ID>}
+    """
+    query = """
+    SELECT message_id, channel_id FROM giveaways WHERE id=$1
+    """
+    res = await db.fetch(query, id)
+    return {'channel': res[0]['channel_id'], 'message': res[0]['message_id']}
