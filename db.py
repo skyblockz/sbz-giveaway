@@ -133,8 +133,16 @@ async def roll_winner(db: asyncpg.pool.Pool, id: int):
     participants = res[0]['participants']
     winner_count = res[0]['winner_count']
     if len(participants) == 0:
+        query = """
+            UPDATE giveaways SET winners=$1 WHERE id=$2
+            """
+        await db.execute(query, [0], id)
         raise NoParticipants
     if len(participants) <= winner_count:
+        query = """
+                    UPDATE giveaways SET winners=$1 WHERE id=$2
+                    """
+        await db.execute(query, [0], id)
         raise NotEnoughParticipants
     else:
         winners = random.sample(participants, winner_count)
