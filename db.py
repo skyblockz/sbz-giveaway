@@ -144,7 +144,7 @@ async def roll_winner(db: asyncpg.pool.Pool, id: int):
             """
         await db.execute(query, [0], id)
         raise NoParticipants
-    if len(participants) <= winner_count:
+    if len(participants) < winner_count:
         query = """
                     UPDATE giveaways SET winners=$1 WHERE id=$2
                     """
