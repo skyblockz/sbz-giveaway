@@ -118,11 +118,16 @@ async def roll_winner(db: asyncpg.pool.Pool, id: int):
     res = await db.fetch(query, id)
     participants = res[0]['participants']
     winner_count = res[0]['winner_count']
-    winners = random.choices(participants, k=winner_count)
+    if len(participants) <= winner_count:
+        # We dont have to roll it because the participants are less than the winner count, all participants are now winners
+        winners = participants
+    else:
+        winners = random.choices(participants, k=winner_count)
     query = """
     UPDATE giveaways SET winners=$1 WHERE id=$2
     """
     await db.execute(query, winners, id)
+    return winners
 
 
 async def get_need_rolling_giveaways(db: asyncpg.pool.Pool):
