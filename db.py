@@ -16,6 +16,11 @@ class NoParticipants(Exception):
         super().__init__('No participants have participated in this giveaway')
 
 
+class NotParticipated(Exception):
+    def __init__(self):
+        super().__init__('The requested removal object did not participated in this giveaway')
+
+
 async def ensure_database_validity(db: asyncpg.pool.Pool):
     """
     Ensures the database table is valid
@@ -34,7 +39,7 @@ async def ensure_database_validity(db: asyncpg.pool.Pool):
         winner_count int           not null,
         prize_name   text          not null,
         image        text,
-        host         text          not null,
+        host         bigint        not null,
         requirements bigint[],
         participants bigint[],
         winners      bigint[]
@@ -64,7 +69,7 @@ async def create_giveaway(db: asyncpg.pool.Pool, id: int, ctx: commands.Context,
                           host: str,
                           winner_count: int = 1,
                           image: str = None,
-                          requirements=None):
+                          requirements=None, starts_at: int = None):
     """
     Create a new giveaway
 
@@ -77,6 +82,7 @@ async def create_giveaway(db: asyncpg.pool.Pool, id: int, ctx: commands.Context,
     :param winner_count: How many winner should there be
     :param image: The image of the giveaway (Optional)
     :param requirements: A list with all the roles that is allowed to participate in the giveaway (Optional)
+    :param starts_at: Customize the starting time, if not provided uses int(time.time())
     :return: None
     """
     if requirements is None:
@@ -86,7 +92,8 @@ async def create_giveaway(db: asyncpg.pool.Pool, id: int, ctx: commands.Context,
     (id, message_id, channel_id, created_at, length, winner_count, prize_name, image, host,requirements) VALUES 
     ($1, $2 ,$3, $4, $5, $6, $7, $8, $9, $10)
     """
-    await db.execute(query, id, ctx.message.id, ctx.channel.id, int(time.time()), length, winner_count, prize_name,
+    await db.execute(query, id, ctx.message.id, ctx.channel.id, int(time.time()) if starts_at is None else starts_at,
+                     length, winner_count, prize_name,
                      image, host, requirements)
 
 
@@ -97,7 +104,7 @@ async def add_participant(db: asyncpg.pool.Pool, id: int, member: discord.Member
 
     :param db: The database object
     :param id: The giveaway ID
-    :param member: The member object of the participant to add
+    :param member: A :class:`discord.Member` object of the participant to add
     :return: bool : If the the user has qualified for the giveaway or not
     """
     query = """
@@ -115,10 +122,32 @@ async def add_participant(db: asyncpg.pool.Pool, id: int, member: discord.Member
     if not qualified:
         return False
     query = """
-    UPDATE giveaways SET participants = array_append(participants, $1)
+    UPDATE giveaways SET participants = array_append(participants, $1) WHERE id=$2
+    """
+    await db.execute(query, member.id, id)
+    return True
+
+
+async def remove_participant(db: asyncpg.pool.Pool, id: int, member: discord.Member):
+    """
+    Removes a participant from the giveaway participants
+
+    :param db: The database object
+    :param id: The giveaway ID
+    :param member: A :class:`discord.Member` object for the participant to remove
+    :raises NotParticipated
+    :return: Nothing
+    """
+    query = """
+        SELECT participants FROM giveaways WHERE id=$1
+        """
+    parts = (await db.fetch(query, id))[0]['participants']
+    if member.id not in parts:
+        raise NotParticipated
+    query = """
+        UPDATE giveaways SET participants = array_remove(participants, $1)
     """
     await db.execute(query, member.id)
-    return True
 
 
 async def roll_winner(db: asyncpg.pool.Pool, id: int):
@@ -192,4 +221,22 @@ async def get_info_of_giveaway(db: asyncpg.pool.Pool, id: int):
     SELECT * FROM giveaways WHERE id=$1
     """
     res = await db.fetch(query, id)
+    return dict(res[0])
+
+
+async def search_giveaway(db: asyncpg.pool.Pool, target: str, value):
+    """
+    Search a giveaway based on the provided information
+
+    :param db: The database object
+    :param target: The column name (eg. message_id)
+    :param value: The value of the target to search with
+    :return: The first result as a dict or None if not found
+    """
+    query = f"""
+    SELECT * FROM giveaways WHERE {target}=$1
+    """
+    res = await db.fetch(query, value)
+    if len(res) == 0:
+        return None
     return dict(res[0])

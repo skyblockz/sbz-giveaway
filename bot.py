@@ -2,7 +2,9 @@ import asyncio
 import datetime
 import json
 import logging
+import random
 import re
+import time
 import traceback
 
 import asyncpg
@@ -25,6 +27,7 @@ intents = discord.Intents.all()
 logging.basicConfig(level=logging.INFO)
 bot = SBZGiveawayBot(command_prefix='g$', intents=intents)
 bot.load_extension('jishaku')
+tada_emoji = '\U0001f389'
 
 with open('token.json', 'r') as f:
     tokens = json.loads(f.read())
@@ -99,7 +102,7 @@ async def check_giveaways():
                 embed = discord.Embed(title=details['prize_name'],
                                       description=f'Not enough people joined the giveaway (only {len(details["participants"])}), thus the roll has been canceled',
                                       colour=discord.Colour.dark_red())
-                embed.add_field(name='Hosted By', value=details['host'])
+                embed.add_field(name='Hosted By', value=f'<@!{details["host"]}>')
                 if details['image'] is not None:
                     embed.set_image(url=details['image'])
                 embed.timestamp = datetime.datetime.utcfromtimestamp(details['created_at'] + details['length'])
@@ -112,10 +115,13 @@ async def check_giveaways():
                 continue
             details = await db.get_info_of_giveaway(bot.db, ga_id)
             winners_ping = [f'<@!{i}>' for i in details['winners']]
-            embed = discord.Embed(title=details['prize_name'],
-                                  description=f'Winner{"s" if details["winner_count"] > 1 else ""}: {" ".join(winners_ping)}'
+            embed = discord.Embed(title=details['prize_name']
                                   )
-            embed.add_field(name='Hosted By', value=details['host'])
+            embed.add_field(name='Hosted By', value=f'<@!{details["host"]}>')
+            if details['requirements'] is not None:
+                req_ping = [f'<@&{i}>' for i in details['requirements']]
+                embed.add_field(name='Requirements (Match one of them)', value=', '.join(req_ping))
+            embed.add_field(name='Winner' + ('s' if len(winners) >= 2 else ''), value=', '.join(winners_ping))
             if details['image'] is not None:
                 embed.set_image(url=details['image'])
             embed.timestamp = datetime.datetime.utcfromtimestamp(details['created_at'] + details['length'])
@@ -124,7 +130,7 @@ async def check_giveaways():
             mc = await cc.fetch_message(details['message_id'])
             await mc.edit(embed=embed)
             await cc.send(
-                f'Giveaway of {details["prize_name"]} (ID:{str(ga_id)}) has been rolled, winners: {" ".join(winners_ping)}')
+                f'Giveaway of {details["prize_name"]} (ID:{str(ga_id)}) has been rolled, winners: {" ".join(winners_ping)}\nCongratulations!')
 
 
 @check_giveaways.error
@@ -148,9 +154,9 @@ async def new_giveaway(ctx):
         'Welcome to Interactive Giveaway Creator, please answer some questions before you make a giveaway.\nType `cancel` anytime to terminate the interactive session\n\n1. Where would you like to create the giveaway at?')
     try:
         msg = await bot.wait_for('message', check=check, timeout=240)
-        channel_id = (await TextChannelConverter().convert(ctx, msg.content)).id
+        channel = await TextChannelConverter().convert(ctx, msg.content)
         await ctx.send(
-            f'Channel will be <#{str(channel_id)}>\n\n2.How long should the giveaway last for? (suffixes: w-week d-day h-hour, m-minute, s-second)')
+            f'Channel will be {channel.mention}\n\n2.How long should the giveaway last for? (suffixes: w-week d-day h-hour, m-minute, s-second)')
         msg = await bot.wait_for('message', check=check, timeout=240)
         length = convert_time(msg.content)
         await ctx.send(
@@ -174,21 +180,43 @@ async def new_giveaway(ctx):
         await ctx.send(
             f'Image URL will be {image}\n\n6. Who donated for the giveaway? (You can enter their user ID / name#1234 or ping them)')
         msg = await bot.wait_for('message', check=check, timeout=240)
-        host = (await MemberConverter().convert(ctx, msg.content)).id
+        host = await MemberConverter().convert(ctx, msg.content)
         await ctx.send(
-            f'<@!{host}> hosted the giveaway\n\n7. Set any requirements on this giveaway (Type in the role IDs, separate them in space, type none or n if there isn\'t any)')
+            f'{host.mention} hosted the giveaway\n\n7. Set any requirements on this giveaway (Type in the role IDs, separate them in space, type none or n if there isn\'t any)')
         msg = await bot.wait_for('message', check=check, timeout=240)
         if msg.content.replace(' ', '').isdigit():
             requirements = [int(i) for i in msg.content.split(' ')]
         else:
             requirements = None
-        req_ping = [f'<@&{i}>' for i in requirements]
+        if requirements is not None:
+            req_ping = [f'<@&{i}>' for i in requirements]
+        else:
+            req_ping = None
         await ctx.send(
-            f'Please validate your selections:\n\nCID `{channel_id}`\nLGT `{length}`\nWNC `{winner_count}`\nPZN `{prize_name}`\nIMG `{image}`\nHST `{host}`\nREQ {", ".join(req_ping)}\n\nType `yes` to start the giveaway', allowed_mentions=discord.AllowedMentions.none())
+            f'Please validate your selections:\n\nCHN {channel.mention}\nLGT `{length}`\nWNC `{winner_count}`\nPZN `{prize_name}`\nIMG `{image}`\nHST {host.mention}\nREQ {", ".join(req_ping) if req_ping is not None else "None"}\n\nType `yes` to start the giveaway',
+            allowed_mentions=discord.AllowedMentions.none())
         msg = await bot.wait_for('message', check=check, timeout=240)
         if 'y' not in msg.content:
             raise InterruptedError
-        await ctx.send('it should create smth now')
+        next_id = await db.get_next_id(bot.db)
+        creation_time = int(time.time())
+        embed = discord.Embed(title=prize_name,
+                              colour=discord.Colour.from_rgb(random.randint(0, 255), random.randint(0, 255),
+                                                             random.randint(0, 255)))
+        embed.add_field(name='Hosted By', value=host.mention)
+        if requirements is not None:
+            embed.add_field(name='Requirements (Match one of them)', value=', '.join(req_ping))
+        embed.add_field(name='Winners', value=str(winner_count))
+        if image is not None:
+            embed.set_image(url=image)
+        embed.timestamp = datetime.datetime.utcfromtimestamp(creation_time + length)
+        embed.set_footer(text=f'ID: {next_id}| Ends At')
+        sent = await channel.send(embed=embed)
+        sent_ctx = await bot.get_context(sent)
+        await db.create_giveaway(bot.db, next_id, sent_ctx, length, prize_name, host.id, winner_count, image,
+                                 requirements,
+                                 creation_time)
+        await sent.add_reaction(tada_emoji)
     except asyncio.TimeoutError:
         await ctx.send('Timed out, all inputs have been discarded.')
     except Canceled:
@@ -197,6 +225,43 @@ async def new_giveaway(ctx):
         await ctx.send('Channel or host invalid, terminating interactive session, all inputs have been discarded')
     except InterruptedError:
         await ctx.send('Last validation did not pass, terminating interactive session, all inputs have been discarded')
+
+
+@bot.event
+async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
+    if payload.user_id == bot.user.id:
+        return
+    giveaway = await db.search_giveaway(bot.db, 'message_id', payload.message_id)
+    if giveaway is None:
+        return
+    if giveaway['winners'] is not None:
+        return
+    member = bot.get_guild(payload.guild_id).get_member(payload.user_id)
+    res = await db.add_participant(bot.db, giveaway['id'], member)
+    msg = await bot.get_guild(payload.guild_id).get_channel(payload.channel_id).fetch_message(payload.message_id)
+    msg: discord.Message
+    if not res:
+        await msg.remove_reaction(tada_emoji, member)
+        await member.send(
+            f'Your attempt on participating in the giveaway at {msg.jump_url} has been denied, due to the insufficient requirements you meet')
+    else:
+        await member.send(f'You have successfully participated in the giveaway at {msg.jump_url}')
+
+
+@bot.event
+async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
+    if payload.user_id == bot.user.id:
+        return
+    giveaway = await db.search_giveaway(bot.db, 'message_id', payload.message_id)
+    if giveaway is None:
+        return
+    if giveaway['winners'] is not None:
+        return
+    member = bot.get_guild(payload.guild_id).get_member(payload.user_id)
+    await db.remove_participant(bot.db, giveaway['id'], member)
+    await member.send(
+        f'You have successfully unparticipated the giveaway at https://discord.com/channels/{payload.guild_id}/{payload.channel_id}/{payload.message_id}')
+    return
 
 
 check_giveaways.start()
