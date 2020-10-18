@@ -72,7 +72,7 @@ async def on_ready():
 @tasks.loop(seconds=1)
 async def check_giveaways():
     if not bot.loaded_db:
-        # bot hasnt loaded DB yet
+        # bot hasn't loaded DB yet
         return
     need_rolling = await db.get_need_rolling_giveaways(bot.db)
     if len(need_rolling) == 0:
