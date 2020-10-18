@@ -59,7 +59,7 @@ async def get_next_id(db: asyncpg.pool.Pool):
     SELECT id FROM giveaways ORDER BY id DESC LIMIT 1
     """
     res = await db.fetch(query)
-    if res == []:
+    if not res:
         return 0
     res = res[0]['id']
     return res + 1

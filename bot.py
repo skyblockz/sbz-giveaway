@@ -264,5 +264,31 @@ async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
     return
 
 
+@bot.command(name='reroll', usage='reroll <giveaway_id>', description='Rerolls the giveaway')
+async def reroll(ctx: commands.Context, giveaway_id: int):
+    ga = await db.search_giveaway(bot.db, 'id', giveaway_id)
+    if ga is None:
+        await ctx.send(f'Reroll failed, giveaway ID {giveaway_id} does not exist')
+    chn = ctx.guild.get_channel(ga['channel_id'])
+    msg = await chn.fetch_message(ga['message_id'])
+    new_winners = await db.roll_winner(bot.db, giveaway_id)
+    winners_ping = [f'<@!{str(i)}>' for i in new_winners]
+    embed = discord.Embed(title=ga['prize_name']
+                          )
+    embed.add_field(name='Hosted By', value=f'<@!{ga["host"]}>')
+    if ga['requirements'] is not None:
+        req_ping = [f'<@&{i}>' for i in ga['requirements']]
+        embed.add_field(name='Requirements (Match one of them)', value=', '.join(req_ping))
+    embed.add_field(name='Winner' + ('s' if len(new_winners) >= 2 else ''), value=', '.join(winners_ping))
+    if ga['image'] is not None:
+        embed.set_image(url=ga['image'])
+    embed.timestamp = datetime.datetime.utcfromtimestamp(ga['created_at'] + ga['length'])
+    embed.set_footer(text=f'ID: {giveaway_id}| Ended At')
+    await msg.edit(embed=embed)
+    await chn.send(
+        f'Giveaway of {ga["prize_name"]} (ID:{str(giveaway_id)}) has been rerolled, new winners: {" ".join(winners_ping)}\nCongratulations!')
+
+
+
 check_giveaways.start()
 bot.run(tokens['token'])
