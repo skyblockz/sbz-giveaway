@@ -144,6 +144,7 @@ class Canceled(Exception):
 
 
 @bot.command(name='new', usage='new', description='Launches an interactive session of creating a new giveaway')
+@commands.has_any_role(593163327304237098, 764541727494504489, 637823625558229023, 598197239688724520)
 async def new_giveaway(ctx):
     def check(message):
         if message.content == 'cancel':
@@ -265,6 +266,7 @@ async def on_raw_reaction_remove(payload: discord.RawReactionActionEvent):
 
 
 @bot.command(name='reroll', usage='reroll <giveaway_id>', description='Rerolls the giveaway')
+@commands.has_any_role(593163327304237098, 764541727494504489, 637823625558229023, 598197239688724520)
 async def reroll(ctx: commands.Context, giveaway_id: int):
     ga = await db.search_giveaway(bot.db, 'id', giveaway_id)
     if ga is None:
@@ -288,6 +290,15 @@ async def reroll(ctx: commands.Context, giveaway_id: int):
     await chn.send(
         f'Giveaway of {ga["prize_name"]} (ID:{str(giveaway_id)}) has been rerolled, new winners: {" ".join(winners_ping)}\nCongratulations!')
 
+
+@bot.command(name='forceaddparticipant', usage='forceaddparticipant <giveaway_id> <member>',
+             description='Force adds a pariticpant to the giveaway', aliases=['fadd'])
+@commands.is_owner()
+async def forceaddpariticpant(ctx, giveaway_id: int, member: discord.Member):
+    ga = await db.search_giveaway(bot.db, 'id', giveaway_id)
+    if ga is None:
+        await ctx.send(f'Force add failed, giveaway ID {giveaway_id} does not exist')
+    await db.add_participant(bot.db, giveaway_id, member)
 
 
 check_giveaways.start()
