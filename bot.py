@@ -71,6 +71,7 @@ async def on_ready():
 
 @tasks.loop(seconds=1)
 async def check_giveaways():
+    await bot.wait_until_ready()
     if not bot.loaded_db:
         # bot hasn't loaded DB yet
         return
