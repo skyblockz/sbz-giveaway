@@ -276,7 +276,7 @@ async def reroll(ctx: commands.Context, giveaway_id: int):
     msg = await chn.fetch_message(ga['message_id'])
     new_winners = await db.roll_winner(bot.db, giveaway_id)
     winners_ping = [f'<@!{str(i)}>' for i in new_winners]
-    embed = discord.Embed(title=ga['prize_name']
+    embed = discord.Embed(title=ga['prize_name'] + ' (Rerolled)'
                           )
     embed.add_field(name='Hosted By', value=f'<@!{ga["host"]}>')
     if not ga['requirements']:
