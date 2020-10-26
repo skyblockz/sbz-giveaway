@@ -118,7 +118,7 @@ async def check_giveaways():
             embed = discord.Embed(title=details['prize_name']
                                   )
             embed.add_field(name='Hosted By', value=f'<@!{details["host"]}>')
-            if details['requirements'] is not None:
+            if details['requirements']:
                 req_ping = [f'<@&{i}>' for i in details['requirements']]
                 embed.add_field(name='Requirements (Match one of them)', value=', '.join(req_ping))
             embed.add_field(name='Winner' + ('s' if len(winners) >= 2 else ''), value=', '.join(winners_ping))
