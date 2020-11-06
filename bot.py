@@ -72,6 +72,7 @@ async def on_ready():
 
 @tasks.loop(seconds=1)
 async def check_giveaways():
+    await bot.wait_until_ready()
     if not bot.loaded_db:
         # bot hasn't loaded DB yet
         return
@@ -119,7 +120,7 @@ async def check_giveaways():
             embed = discord.Embed(title=details['prize_name']
                                   )
             embed.add_field(name='Hosted By', value=f'<@!{details["host"]}>')
-            if details['requirements'] is not None:
+            if details['requirements']:
                 req_ping = [f'<@&{i}>' for i in details['requirements']]
                 embed.add_field(name='Requirements (Match one of them)', value=', '.join(req_ping))
             embed.add_field(name='Winner' + ('s' if len(winners) >= 2 else ''), value=', '.join(winners_ping))
@@ -277,10 +278,10 @@ async def reroll(ctx: commands.Context, giveaway_id: int):
     msg = await chn.fetch_message(ga['message_id'])
     new_winners = await db.roll_winner(bot.db, giveaway_id)
     winners_ping = [f'<@!{str(i)}>' for i in new_winners]
-    embed = discord.Embed(title=ga['prize_name']
+    embed = discord.Embed(title=ga['prize_name'] + ' (Rerolled)'
                           )
     embed.add_field(name='Hosted By', value=f'<@!{ga["host"]}>')
-    if ga['requirements'] is not None:
+    if ga['requirements']:
         req_ping = [f'<@&{i}>' for i in ga['requirements']]
         embed.add_field(name='Requirements (Match one of them)', value=', '.join(req_ping))
     embed.add_field(name='Winner' + ('s' if len(new_winners) >= 2 else ''), value=', '.join(winners_ping))
