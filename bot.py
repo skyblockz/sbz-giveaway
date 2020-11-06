@@ -6,6 +6,7 @@ import random
 import re
 import time
 import traceback
+import typing
 
 import asyncpg
 import discord
@@ -154,6 +155,7 @@ async def new_giveaway(ctx):
     await ctx.send(
         'Welcome to Interactive Giveaway Creator, please answer some questions before you make a giveaway.\nType `cancel` anytime to terminate the interactive session\n\n1. Where would you like to create the giveaway at?')
     try:
+        # ask for channel, time, winners, prize name, showcase image, donor, requirements
         msg = await bot.wait_for('message', check=check, timeout=240)
         channel = await TextChannelConverter().convert(ctx, msg.content)
         await ctx.send(
@@ -299,6 +301,33 @@ async def forceaddpariticpant(ctx, giveaway_id: int, member: discord.Member):
     if ga is None:
         await ctx.send(f'Force add failed, giveaway ID {giveaway_id} does not exist')
     await db.add_participant(bot.db, giveaway_id, member)
+
+
+@bot.command(name='quick',
+             usage='quick <channel> <length> <winner_count> <host> <prize_name>',
+             description='Creates a giveaway with one-line command, but without the ability to specify optional parameters, such as showcase image and requirements',
+             aliases=['q'])
+@commands.has_any_role(593163327304237098, 764541727494504489, 637823625558229023, 598197239688724520)
+async def quick(ctx: commands.Context, channel: discord.TextChannel, length: typing.Union[int, str], winner_count: int,
+                host: discord.Member, *, prize_name: str):
+    await ctx.send(
+        f'Giveaway will be created with the following parameters:\n\nCHN {channel.mention}\nLGT `{length}`\nWNC `{winner_count}`\nPZN `{prize_name}`',
+        allowed_mentions=discord.AllowedMentions.none())
+    next_id = await db.get_next_id(bot.db)
+    creation_time = int(time.time())
+    embed = discord.Embed(title=prize_name,
+                          colour=discord.Colour.from_rgb(random.randint(0, 255), random.randint(0, 255),
+                                                         random.randint(0, 255)))
+    embed.add_field(name='Hosted By', value=host.mention)
+    embed.add_field(name='Winners', value=str(winner_count))
+    embed.timestamp = datetime.datetime.utcfromtimestamp(creation_time + length)
+    embed.set_footer(text=f'ID: {next_id}| Ends At')
+    sent = await channel.send(embed=embed)
+    sent_ctx = await bot.get_context(sent)
+    await db.create_giveaway(bot.db, next_id, sent_ctx, length, prize_name, host.id, winner_count, None,
+                             [],
+                             creation_time)
+    await sent.add_reaction(tada_emoji)
 
 
 check_giveaways.start()
