@@ -236,10 +236,22 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
     if payload.user_id == bot.user.id:
         return
     giveaway = await db.search_giveaway(bot.db, 'message_id', payload.message_id)
-    if giveaway is None:
+    gates = await db.search_gate(bot.db, payload.channel_id, payload.message_id)
+    if giveaway is None and gates is None:
         return
-    if giveaway['winners'] is not None:
-        return
+    if gates is not None:
+        member = bot.get_guild(payload.guild_id).get_member(payload.user_id)
+        roles = [iii.id for iii in member.roles]
+        if not any(iii in roles for iii in gates['requirements']):
+            message = await bot.get_channel(gates['channel_id']).fetch_message(gates['id'])
+            for i in message.reactions:
+                i:discord.Reaction
+                if str(payload.emoji) == str(i.emoji):
+                    await i.remove(bot.get_user(payload.user_id))
+        if giveaway is None:
+            return
+        if giveaway['winners'] is not None:
+            return
     member = bot.get_guild(payload.guild_id).get_member(payload.user_id)
     res = await db.add_participant(bot.db, giveaway['id'], member)
     msg = await bot.get_guild(payload.guild_id).get_channel(payload.channel_id).fetch_message(payload.message_id)
@@ -329,6 +341,33 @@ async def quick(ctx: commands.Context, channel: discord.TextChannel, length: typ
                              [],
                              creation_time)
     await sent.add_reaction(tada_emoji)
+
+
+@bot.command(name='gate', usage='gate <channel> <message_id> <interval> <requirements>',
+             description='Adds a requirement gate to the message, reacting any reactions on the message without matching the requirements will be denied and have it removed\nInterval formats as <amount><suffix> where available suffixes are w,d,h,m,s\nRequirements shall be splited with spaces')
+@commands.has_any_role(593163327304237098, 764541727494504489, 637823625558229023, 598197239688724520)
+async def gate(ctx: commands.Context, channel: discord.TextChannel, message_id: int, interval: str, *,
+               requirements: str):
+    interval = int(convert_time(interval))
+    requirements = requirements.split(' ')
+    requirements = [int(i) for i in requirements]
+    try:
+        await db.add_gate(bot.db, channel.id, message_id, interval, requirements)
+    except asyncpg.UniqueViolationError:
+        await ctx.send('There has been already a gate on this message')
+    msg = await channel.fetch_message(message_id)
+    await asyncio.sleep(5)
+    for i in msg.reactions:
+        async for ii in i.users():
+            if ii.bot:
+                continue
+            if isinstance(ii, discord.User):
+                await i.remove(ii)
+                continue
+            ii_roles = [iii.id for iii in ii.roles]
+            if not any(iii in ii_roles for iii in requirements):
+                await i.remove(ii)
+    await ctx.send('Gate added')
 
 
 check_giveaways.start()

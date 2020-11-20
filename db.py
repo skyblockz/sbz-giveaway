@@ -46,6 +46,16 @@ async def ensure_database_validity(db: asyncpg.pool.Pool):
     );
     """
     await db.execute(query)
+    gates_query = """
+    CREATE TABLE IF NOT EXISTS giveaway_gates
+    (
+        id           bigint unique not null primary key,
+        channel_id   bigint not null,
+        ends_at      bigint,
+        requirements bigint[]
+    );
+    """
+    await db.execute(gates_query)
 
 
 async def get_next_id(db: asyncpg.pool.Pool):
@@ -240,3 +250,52 @@ async def search_giveaway(db: asyncpg.pool.Pool, target: str, value):
     if len(res) == 0:
         return None
     return dict(res[0])
+
+
+async def add_gate(db: asyncpg.pool.Pool, channel_id: int, message_id: int, last_for: int, requirements: list):
+    """
+    Adds a new gate to message_id
+
+    :param db: The database object
+    :param channel_id: The channel ID of the message to add gate to
+    :param message_id: The message ID to add gate to
+    :param last_for: How long should the system count the gate as valid before discarding
+    :param requirements: What requirements shall be applied to
+    :return: None
+    """
+    query = """
+    INSERT INTO giveaway_gates
+    (id, channel_id, ends_at, requirements) VALUES 
+    ($1, $2 ,$3, $4)
+    """
+    await db.execute(query, message_id, channel_id, last_for + int(time.time()) + 5, requirements)
+
+
+async def search_gate(db: asyncpg.pool.Pool, channel_id: int, message_id: int):
+    """
+    Searches for a gate in message_id
+
+    :param db: The database object
+    :param channel_id: The channel ID of message to search gates of
+    :param message_id: The message ID to look for gates
+    :return: The gate's information, None if not found
+    """
+    query = f"""
+        SELECT * FROM giveaway_gates WHERE id=$1 AND channel_id=$2
+        """
+    res = await db.fetch(query, message_id, channel_id)
+    if len(res) == 0:
+        return None
+    return dict(res[0])
+
+
+async def remove_gate(db: asyncpg.pool.Pool, channel_id: int, message_id: int):
+    """
+    Removes a gate from message_id
+
+    :param db: The database object
+    :param channel_id: The channel ID of the message to be removed gate of
+    :param message_id: The message ID to have the gate removed
+    :return: None
+    """
+    pass #TODO
