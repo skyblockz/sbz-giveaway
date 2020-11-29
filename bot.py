@@ -384,6 +384,10 @@ async def gate(ctx: commands.Context, channel: discord.TextChannel, message_id: 
     except asyncpg.UniqueViolationError:
         await ctx.send('There has been already a gate on this message')
     msg = await channel.fetch_message(message_id)
+    req_ping = [f'<@&{i}>' for i in requirements]
+    await ctx.send(
+        f'Gate added, with the following roles: {" ".join(req_ping)}, existing illegal reactions are being removed',
+        allowed_mentions=discord.AllowedMentions.none())
     for i in msg.reactions:
         async for ii in i.users():
             if ii.bot:
@@ -395,9 +399,6 @@ async def gate(ctx: commands.Context, channel: discord.TextChannel, message_id: 
             if not any(iii in ii_roles for iii in requirements):
                 await i.remove(ii)
                 logging.info(f'Removed {str(ii.id)} from {str(message_id)}')
-    req_ping = [f'<@&{i}>' for i in requirements]
-    await ctx.send(f'Gate added, with the following roles: {" ".join(req_ping)}',
-                   allowed_mentions=discord.AllowedMentions.none())
 
 
 check_giveaways.start()
