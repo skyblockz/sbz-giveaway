@@ -298,4 +298,36 @@ async def remove_gate(db: asyncpg.pool.Pool, channel_id: int, message_id: int):
     :param message_id: The message ID to have the gate removed
     :return: None
     """
-    pass #TODO
+    query = """
+    DELETE FROM giveaway_gates WHERE channel_id=$1 AND id=$2 
+    """
+    await db.execute(query, channel_id, message_id)
+
+
+async def clear_expired_gates(db: asyncpg.pool.Pool):
+    """
+    Removes all gate that has expired
+    :param db: The database object
+    :return: None
+    """
+    query = """
+    DELETE FROM giveaway_gates WHERE ends_at<=$1
+    """
+    await db.execute(query, int(time.time()))
+
+
+async def get_ending_soon_gates(db: asyncpg.pool.Pool, remaining:int=30):
+    """
+    Gets ending soon gates
+    :param db: The database object
+    :param remaining: The time to define "ending soon", defaults to 30
+    :return: A list of ending soon gates
+    """
+    query = """
+    SELECT * FROM giveaway_gates WHERE ends_at<=$1
+    """
+    res = await db.fetch(query, remaining + time.time())
+    ret = []
+    for i in res:
+        ret.append(dict(i))
+    return ret

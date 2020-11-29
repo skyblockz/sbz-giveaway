@@ -29,6 +29,12 @@ logging.basicConfig(level=logging.INFO)
 bot = SBZGiveawayBot(command_prefix='g$', intents=intents)
 bot.load_extension('jishaku')
 tada_emoji = '\U0001f389'
+sbg_base = [598390820655071277, 604277350791774208, 674788697207734310, 640713620774322176, 599517945571573800,
+            674788690614026279, 602627694332477440, 640714152788099089, 640708611097493561, 600259912022360117,
+            732020286760681594, 593203392524976138, 593163327304237098, 658462156391448586, 686404956164456670,
+            593161930273849354, 743545013463679117, 594951070568939553, 596113518835531827, 596561055485001758,
+            596950202502479888, 596951779724492813, 646282949704024065, 592794714051182602, 594010023496122384,
+            611414047446794270, 597071614756126720, 620863493452726272, 630839251038109707, 718494182427197511]
 
 with open('token.json', 'r') as f:
     tokens = json.loads(f.read())
@@ -133,6 +139,24 @@ async def check_giveaways():
             await mc.edit(embed=embed)
             await cc.send(
                 f'Giveaway of {details["prize_name"]} (ID:{str(ga_id)}) has been rolled, winners: {" ".join(winners_ping)}\nCongratulations!')
+
+
+@tasks.loop(seconds=1)
+async def invalidate_and_check_ongoing_gates():
+    await db.clear_expired_gates(bot.db)
+    for iiiii in await db.get_ending_soon_gates(bot.db):
+        msg = await bot.get_channel(int(iiiii['channel_id'])).fetch_message(int(iiiii['id']))
+        for i in msg.reactions:
+            async for ii in i.users():
+                if ii.bot:
+                    continue
+                if isinstance(ii, discord.User):
+                    await i.remove(ii)
+                    continue
+                ii_roles = [iii.id for iii in ii.roles]
+                if not any(iii in ii_roles for iii in iiiii['requirements']):
+                    await i.remove(ii)
+                    logging.info(f'Removed {str(ii.id)} from {str(iiiii["id"])}')
 
 
 @check_giveaways.error
@@ -245,9 +269,10 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
         if not any(iii in roles for iii in gates['requirements']):
             message = await bot.get_channel(gates['channel_id']).fetch_message(gates['id'])
             for i in message.reactions:
-                i:discord.Reaction
+                i: discord.Reaction
                 if str(payload.emoji) == str(i.emoji):
                     await i.remove(bot.get_user(payload.user_id))
+                    logging.info(f'Removed {str(payload.user_id)} from {str(payload.message_id)}')
         if giveaway is None:
             return
         if giveaway['winners'] is not None:
@@ -349,6 +374,7 @@ async def quick(ctx: commands.Context, channel: discord.TextChannel, length: typ
 async def gate(ctx: commands.Context, channel: discord.TextChannel, message_id: int, interval: str, *,
                requirements: str):
     interval = int(convert_time(interval))
+    requirements = requirements.replace('sbg', ' '.join(sbg_base))
     requirements = requirements.split(' ')
     requirements = [int(i) for i in requirements]
     try:
@@ -356,7 +382,6 @@ async def gate(ctx: commands.Context, channel: discord.TextChannel, message_id: 
     except asyncpg.UniqueViolationError:
         await ctx.send('There has been already a gate on this message')
     msg = await channel.fetch_message(message_id)
-    await asyncio.sleep(5)
     for i in msg.reactions:
         async for ii in i.users():
             if ii.bot:
@@ -367,7 +392,9 @@ async def gate(ctx: commands.Context, channel: discord.TextChannel, message_id: 
             ii_roles = [iii.id for iii in ii.roles]
             if not any(iii in ii_roles for iii in requirements):
                 await i.remove(ii)
-    await ctx.send('Gate added')
+                logging.info(f'Removed {str(ii.id)} from {str(message_id)}')
+    req_ping = [f'<@&{i}>' for i in requirements]
+    await ctx.send(f'Gate added, with the following roles: {" ".join(req_ping)}', allowed_mentions=discord.AllowedMentions.none())
 
 
 check_giveaways.start()
