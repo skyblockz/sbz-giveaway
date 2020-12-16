@@ -442,15 +442,37 @@ async def modify(ctx: commands.Context, channel: discord.TextChannel, message_id
     pr = parse_requirements(new_requirements)
     await db.modify_gate(bot.db, channel.id, message_id, pr)
     req_ping = [f'<@&{i}>' for i in pr]
-    await ctx.send(f'Gate modified, with the new requirements: {" ".join(req_ping)}', allowed_mentions=discord.AllowedMentions.none())
+    await ctx.send(f'Gate modified, with the new requirements: {" ".join(req_ping)}',
+                   allowed_mentions=discord.AllowedMentions.none())
 
 
-@gate.command(name='remove', usage='gate remove <channel> <message_id>')
+@gate.command(name='remove', usage='gate remove <channel> <message_id>', aliases=['delete'])
 @commands.has_any_role(593163327304237098, 764541727494504489, 637823625558229023, 598197239688724520)
 async def remove(ctx: commands.Context, channel: discord.TextChannel, message_id: int):
     await db.remove_gate(bot.db, channel.id, message_id)
     await ctx.send('Gate removed.')
 
+
+@gate.command(name='qualifycheck', usage='gate qualifycheck <channel> <message_id>')
+@commands.has_any_role(593163327304237098, 764541727494504489, 637823625558229023, 598197239688724520)
+async def qualifycheck(ctx: commands.Context, channel: discord.TextChannel, message_id: int):
+    msg = await channel.fetch_message(message_id)
+    bombarded = 0
+    requirements = (await db.search_gate(bot.db, channel.id, message_id))['requirements']
+    for i in msg.reactions:
+        async for ii in i.users():
+            if ii.bot:
+                continue
+            if isinstance(ii, discord.User):
+                await i.remove(ii)
+                bombarded += 1
+                continue
+            ii_roles = [iii.id for iii in ii.roles]
+            if not any(iii in ii_roles for iii in requirements):
+                await i.remove(ii)
+                bombarded += 1
+                logging.info(f'Removed {str(ii.id)} from {str(message_id)}')
+    await ctx.send(f'{bombarded} users have lost their chance to the giveaway, feelin\' good')
 
 @bot.command(name='reboot')
 @commands.is_owner()
