@@ -442,7 +442,7 @@ async def modify(ctx: commands.Context, channel: discord.TextChannel, message_id
     pr = parse_requirements(new_requirements)
     await db.modify_gate(bot.db, channel.id, message_id, pr)
     req_ping = [f'<@&{i}>' for i in pr]
-    await ctx.send(f'Gate modified, with the new requirements: {" ".join(req_ping)}')
+    await ctx.send(f'Gate modified, with the new requirements: {" ".join(req_ping)}', allowed_mentions=discord.AllowedMentions.none())
 
 
 @gate.command(name='remove', usage='gate remove <channel> <message_id>')
