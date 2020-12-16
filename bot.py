@@ -392,7 +392,7 @@ async def quick(ctx: commands.Context, channel: discord.TextChannel, length: typ
 
 
 @bot.group(name='gate', usage='gate <subcommand>', description='A series of reaction gates related commands',
-           invoke_without_command=True)
+           invoke_without_command=False)
 async def gate(ctx):
     await ctx.send(
         'You shall be using some other commands, instead of this one, think about what you could have done in this 3 seconds typing and wating for this message to appear...')
