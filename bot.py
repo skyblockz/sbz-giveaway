@@ -151,6 +151,8 @@ async def check_giveaways():
 
 @tasks.loop(seconds=1)
 async def invalidate_and_check_ongoing_gates():
+    if not bot.loaded_db:
+        return
     await db.clear_expired_gates(bot.db)
     for iiiii in await db.get_ending_soon_gates(bot.db):
         msg = await bot.get_channel(int(iiiii['channel_id'])).fetch_message(int(iiiii['id']))
