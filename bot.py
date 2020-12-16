@@ -272,7 +272,8 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
     if giveaway is None and gates is None:
         return
     if gates is not None:
-        member = bot.get_guild(payload.guild_id).get_member(payload.user_id)
+        guild = bot.get_guild(payload.guild_id)
+        member = guild.get_member(payload.user_id)
         roles = [iii.id for iii in member.roles]
         if not any(iii in roles for iii in gates['requirements']):
             message = await bot.get_channel(gates['channel_id']).fetch_message(gates['id'])
@@ -280,6 +281,17 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
                 i: discord.Reaction
                 if str(payload.emoji) == str(i.emoji):
                     await i.remove(bot.get_user(payload.user_id))
+                    if member is None:
+                        pass
+                    else:
+                        embed = discord.Embed(title='\u274c**|**Giveaway Participation Attempt Failed')
+                        req_roles = [guild.get_role(iiii) for iiii in gates['requirements']]
+                        embed.add_field(name='You are missing **one of the following** roles: ',
+                                        value='\n'.join([iiii.name for iiii in req_roles]), inline=False)
+                        embed.add_field(name='You can check the following spreadsheet to learn how to get them: ',
+                                        value='https://docs.google.com/document/d/1r4rs_7KsopvFD99SQUKYteLjkXiJcI5jwlW5QNZFfgE',
+                                        inline=False)
+                        await member.send(embed=embed)
                     logging.info(f'Removed {str(payload.user_id)} from {str(payload.message_id)}')
         if giveaway is None:
             return
