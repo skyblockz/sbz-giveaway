@@ -420,5 +420,12 @@ async def gate(ctx: commands.Context, channel: discord.TextChannel, message_id: 
                 logging.info(f'Removed {str(ii.id)} from {str(message_id)}')
 
 
+@bot.command(name='reboot')
+@commands.is_owner()
+async def reboot(ctx):
+    await ctx.send('Shutting down...')
+    await bot.logout()
+
+
 check_giveaways.start()
 bot.run(tokens['token'])
