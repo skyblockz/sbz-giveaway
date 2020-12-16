@@ -428,4 +428,5 @@ async def reboot(ctx):
 
 
 check_giveaways.start()
+invalidate_and_check_ongoing_gates.start()
 bot.run(tokens['token'])
