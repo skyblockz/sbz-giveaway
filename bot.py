@@ -284,7 +284,7 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
                     if member is None:
                         pass
                     else:
-                        embed = discord.Embed(title='\u274c**|**Giveaway Participation Attempt Failed')
+                        embed = discord.Embed(title='\u274c**|**Giveaway Participation Attempt Failed', colour=discord.Colour.red())
                         req_roles = [guild.get_role(iiii) for iiii in gates['requirements']]
                         embed.add_field(name='You are missing **one of the following** roles: ',
                                         value='\n'.join([iiii.name for iiii in req_roles]), inline=False)
