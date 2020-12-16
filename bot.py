@@ -286,7 +286,8 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
                     if member is None:
                         pass
                     else:
-                        embed = discord.Embed(title='\u274c**|**Giveaway Participation Attempt Failed', colour=discord.Colour.red())
+                        embed = discord.Embed(title='\u274c**|**Giveaway Participation Attempt Failed',
+                                              colour=discord.Colour.red())
                         req_roles = [guild.get_role(iiii) for iiii in gates['requirements']]
                         embed.add_field(name='You are missing **one of the following** roles: ',
                                         value='\n'.join([iiii.name for iiii in req_roles]), inline=False)
@@ -390,15 +391,27 @@ async def quick(ctx: commands.Context, channel: discord.TextChannel, length: typ
     await sent.add_reaction(tada_emoji)
 
 
-@bot.command(name='gate', usage='gate <channel> <message_id> <interval> <requirements>',
-             description='Adds a requirement gate to the message, reacting any reactions on the message without matching the requirements will be denied and have it removed\nInterval formats as <amount><suffix> where available suffixes are w,d,h,m,s\nRequirements shall be splited with spaces')
-@commands.has_any_role(593163327304237098, 764541727494504489, 637823625558229023, 598197239688724520)
-async def gate(ctx: commands.Context, channel: discord.TextChannel, message_id: int, interval: str, *,
-               requirements: str):
-    interval = int(convert_time(interval))
+@bot.group(name='gate', usage='gate <subcommand>', description='A series of reaction gates related commands',
+           invoke_without_command=True)
+async def gate(ctx):
+    await ctx.send(
+        'You shall be using some other commands, instead of this one, think about what you could have done in this 3 seconds typing and wating for this message to appear...')
+
+
+def parse_requirements(requirements: str):
     requirements = requirements.replace('sbg', ' '.join(sbg_base))
     requirements = requirements.split(' ')
     requirements = [int(i) for i in requirements]
+    return requirements
+
+
+@gate.command(name='add', usage='gate add <channel> <message_id> <interval> <requirements>',
+              description='Adds a requirement gate to the message, reacting any reactions on the message without matching the requirements will be denied and have it removed\nInterval formats as <amount><suffix> where available suffixes are w,d,h,m,s\nRequirements shall be splited with spaces')
+@commands.has_any_role(593163327304237098, 764541727494504489, 637823625558229023, 598197239688724520)
+async def add(ctx: commands.Context, channel: discord.TextChannel, message_id: int, interval: str, *,
+              requirements: str):
+    interval = int(convert_time(interval))
+    requirements = parse_requirements(requirements)
     try:
         await db.add_gate(bot.db, channel.id, message_id, interval, requirements)
     except asyncpg.UniqueViolationError:
@@ -420,6 +433,23 @@ async def gate(ctx: commands.Context, channel: discord.TextChannel, message_id: 
             if not any(iii in ii_roles for iii in requirements):
                 await i.remove(ii)
                 logging.info(f'Removed {str(ii.id)} from {str(message_id)}')
+
+
+@gate.command(name='modify', usage='gate modify <channel> <message_id> <new_requirements>',
+              description='Changes the requirement gate of message to new_requirements')
+@commands.has_any_role(593163327304237098, 764541727494504489, 637823625558229023, 598197239688724520)
+async def modify(ctx: commands.Context, channel: discord.TextChannel, message_id: int, new_requirements: str):
+    pr = parse_requirements(new_requirements)
+    await db.modify_gate(bot.db, channel.id, message_id, pr)
+    req_ping = [f'<@&{i}>' for i in pr]
+    await ctx.send(f'Gate modified, with the new requirements: {" ".join(req_ping)}')
+
+
+@gate.command(name='remove', usage='gate remove <channel> <message_id>')
+@commands.has_any_role(593163327304237098, 764541727494504489, 637823625558229023, 598197239688724520)
+async def remove(ctx: commands.Context, channel: discord.TextChannel, message_id: int):
+    await db.remove_gate(bot.db, channel.id, message_id)
+    await ctx.send('Gate removed.')
 
 
 @bot.command(name='reboot')

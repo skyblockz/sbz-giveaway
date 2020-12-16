@@ -316,7 +316,7 @@ async def clear_expired_gates(db: asyncpg.pool.Pool):
     await db.execute(query, int(time.time()))
 
 
-async def get_ending_soon_gates(db: asyncpg.pool.Pool, remaining:int=30):
+async def get_ending_soon_gates(db: asyncpg.pool.Pool, remaining: int = 30):
     """
     Gets ending soon gates
     :param db: The database object
@@ -331,3 +331,22 @@ async def get_ending_soon_gates(db: asyncpg.pool.Pool, remaining:int=30):
     for i in res:
         ret.append(dict(i))
     return ret
+
+
+async def modify_gate(db: asyncpg.pool.Pool, channel_id: int, message_id: int, new_requirements):
+    """
+    Modifies existing gate to have their `requirements` become `new_requirements`
+    :param db: The database object.
+    :param channel_id: The channel ID of the message gate to edit
+    :param message_id: The message ID of the message gate to edit
+    :param new_requirements: The new requirements to apply to the message gate
+    :return: None
+    """
+    query = """
+    UPDATE giveaway_gates
+    SET
+        requirements=$1
+    WHERE
+        channel_id=$2 AND id=$3   
+    """
+    await db.execute(query, new_requirements, channel_id, message_id)
