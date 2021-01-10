@@ -8,8 +8,10 @@ import time
 import traceback
 import typing
 
+import aiohttp
 import asyncpg
 import discord
+import git
 import humanize
 from discord.ext import commands, tasks
 from discord.ext.commands import TextChannelConverter, BadArgument, MemberConverter
@@ -29,6 +31,7 @@ logging.basicConfig(level=logging.INFO)
 bot = SBZGiveawayBot(command_prefix='g$', intents=intents)
 bot.load_extension('jishaku')
 tada_emoji = '\U0001f389'
+repo = git.Repo('.')
 sbg_base = ['598390820655071277', '604277350791774208', '599517945571573800', '674788690614026279',
             '602627694332477440', '640708611097493561', '600259912022360117', '732020286760681594',
             '593203392524976138', '593163327304237098', '658462156391448586', '686404956164456670',
@@ -82,6 +85,25 @@ async def on_connect():
 @bot.event
 async def on_ready():
     print('Ready')
+
+
+@bot.event
+async def on_command_error(ctx, error):
+    traceback.print_exception(type(error), error, error.__traceback__)
+    traceback_data = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
+    version = repo.head.object.hexsha[:8]
+    params = {'exc_string': str(error), 'exc_content': traceback_data,
+              'time': int(time.time()), 'msg_author_name': str(ctx.author), 'msg_author_id': str(ctx.author.id),
+              'msg_guild_name': ctx.guild.name,
+              'msg_guild_id': str(ctx.guild.id), 'msg_channel_name': ctx.channel.name,
+              'msg_channel_id': str(ctx.channel.id),
+              'msg_id': str(ctx.message.id), 'msg_cont': ctx.message.content,
+              'bot': 'SkyBlockZ Giveaways', 'version': version,
+              'key': tokens['error']}
+    async with aiohttp.ClientSession(loop=bot.loop) as cs:
+        resp = await cs.post('https://error.robothanzo.dev/add', params=params)
+        track_url = f'https://error.robothanzo.dev/view/{(await resp.json())["track_uuid"]}'
+    await ctx.send(f'Oh crap, something went VERY WRONG, the exception has been recorded at {track_url}')
 
 
 @tasks.loop(seconds=1)
