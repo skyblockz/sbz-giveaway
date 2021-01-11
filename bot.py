@@ -297,7 +297,6 @@ async def new_giveaway(ctx):
 async def send_message_if_needed(guild, gates, member):
     if gates['id'] not in bot.msg_sent:
         bot.msg_sent[gates['id']] = []
-        return
     if member.id not in bot.msg_sent[gates['id']]:
         bot.msg_sent[gates['id']].append(member.id)
         embed = discord.Embed(title='\u274c**|**Giveaway Participation Attempt Failed',
