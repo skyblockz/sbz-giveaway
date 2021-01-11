@@ -32,6 +32,7 @@ bot = SBZGiveawayBot(command_prefix='g$', intents=intents)
 bot.load_extension('jishaku')
 tada_emoji = '\U0001f389'
 repo = git.Repo('.')
+bot.msg_sent = {}
 sbg_base = ['598390820655071277', '604277350791774208', '599517945571573800', '674788690614026279',
             '602627694332477440', '640708611097493561', '600259912022360117', '732020286760681594',
             '593203392524976138', '593163327304237098', '658462156391448586', '686404956164456670',
@@ -46,6 +47,7 @@ sbg_base = ['598390820655071277', '604277350791774208', '599517945571573800', '6
             '717618429728784454', '693272417224622141', '695900911389638666', '751928992092651591',
             '783824492651872306', '778709363979845702', '787881953331249152', '787881958063341568',
             '787881962274684988', '787881966392442911', '787881970872746025']
+
 
 with open('token.json', 'r') as f:
     tokens = json.loads(f.read())
@@ -104,6 +106,11 @@ async def on_command_error(ctx, error):
         resp = await cs.post('https://error.robothanzo.dev/add', params=params)
         track_url = f'https://error.robothanzo.dev/view/{(await resp.json())["track_uuid"]}'
     await ctx.send(f'Oh crap, something went VERY WRONG, the exception has been recorded at {track_url}')
+
+
+@tasks.loop(hours=12)
+async def clear_msg_sent():
+    bot.msg_sent = {}
 
 
 @tasks.loop(seconds=1)
@@ -287,6 +294,23 @@ async def new_giveaway(ctx):
         await ctx.send('Last validation did not pass, terminating interactive session, all inputs have been discarded')
 
 
+async def send_message_if_needed(guild, gates, member):
+    if gates['id'] not in bot.msg_sent:
+        bot.msg_sent[gates['id']] = []
+        return
+    if member.id not in bot.msg_sent[gates['id']]:
+        bot.msg_sent[gates['id']].append(member.id)
+        embed = discord.Embed(title='\u274c**|**Giveaway Participation Attempt Failed',
+                              colour=discord.Colour.red())
+        req_roles = [guild.get_role(iiii) for iiii in gates['requirements']]
+        embed.add_field(name='You are missing **one of the following** roles: ',
+                        value='\n'.join([iiii.name for iiii in req_roles]), inline=False)
+        embed.add_field(name='You can check the following spreadsheet to learn how to get them: ',
+                        value='https://docs.google.com/document/d/1r4rs_7KsopvFD99SQUKYteLjkXiJcI5jwlW5QNZFfgE',
+                        inline=False)
+        await member.send(embed=embed)
+
+
 @bot.event
 async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
     if payload.user_id == bot.user.id:
@@ -308,15 +332,7 @@ async def on_raw_reaction_add(payload: discord.RawReactionActionEvent):
                     if member is None:
                         pass
                     else:
-                        embed = discord.Embed(title='\u274c**|**Giveaway Participation Attempt Failed',
-                                              colour=discord.Colour.red())
-                        req_roles = [guild.get_role(iiii) for iiii in gates['requirements']]
-                        embed.add_field(name='You are missing **one of the following** roles: ',
-                                        value='\n'.join([iiii.name for iiii in req_roles]), inline=False)
-                        embed.add_field(name='You can check the following spreadsheet to learn how to get them: ',
-                                        value='https://docs.google.com/document/d/1r4rs_7KsopvFD99SQUKYteLjkXiJcI5jwlW5QNZFfgE',
-                                        inline=False)
-                        await member.send(embed=embed)
+                        await send_message_if_needed(guild, gates, member)
                     logging.info(f'Removed {str(payload.user_id)} from {str(payload.message_id)}')
         if giveaway is None:
             return
