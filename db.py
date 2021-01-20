@@ -56,6 +56,15 @@ async def ensure_database_validity(db: asyncpg.pool.Pool):
     );
     """
     await db.execute(gates_query)
+    gates_template_query = """
+    CREATE TABLE IF NOT EXISTS giveaway_gates_template
+    (
+        id    text     not null unique primary key,
+        alias text[],
+        roles bigint[] not null
+    );
+    """
+    await db.execute(gates_template_query)
 
 
 async def get_next_id(db: asyncpg.pool.Pool):
@@ -350,3 +359,144 @@ async def modify_gate(db: asyncpg.pool.Pool, channel_id: int, message_id: int, n
         channel_id=$2 AND id=$3   
     """
     await db.execute(query, new_requirements, channel_id, message_id)
+
+
+async def get_gate_template(db: asyncpg.pool.Pool, template_id: str):
+    """
+    Fetches gate template using `template_id`, aliases are accepted
+    :param db: The database object.
+    :param template_id: The template id to query of, can be the alias of it
+    :return: The template result, None if not found
+    """
+    query = """
+    SELECT roles FROM giveaway_gates_template WHERE id=$1
+    """
+    res = await db.fetch(query, template_id)
+    if len(res) == 0:
+        aliased_query = """
+        SELECT roles FROM giveaway_gates_template WHERE $1=ANY(alias)
+        """
+        res = await db.fetch(aliased_query, template_id)
+        if len(res) == 0:
+            return None
+        else:
+            return res[0]['roles']
+    else:
+        return res[0]['roles']
+
+
+async def add_gate_template(db: asyncpg.pool.Pool, template_id: str, roles: list):
+    """
+    Adds another template to the gate templates
+    :param db: The database object.
+    :param template_id: The new template ID to be added to the database
+    :param roles: The roles for the new template as a list of INTEGER
+    :return: None
+    """
+    query = """
+    INSERT INTO giveaway_gates_template (id, alias, roles) VALUES ($1, NULL, $2)
+    """
+    if not all([isinstance(x, int) for x in roles]):
+        raise TypeError(f'Not of the values in roles are integer')
+    await db.execute(query, template_id, roles)
+
+
+async def remove_gate_template(db: asyncpg.pool.Pool, template_id: str):
+    """
+    Deletes a template from the database
+    :param db: The database object
+    :param template_id: The ID of the template to remove
+    :return: None
+    """
+    query = """
+    DELETE FROM giveaway_gates_template WHERE id=$1
+    """
+    await db.execute(query, template_id)
+
+
+async def add_template_alias(db: asyncpg.pool.Pool, template_id: str, aliases: list):
+    """
+    Appends `aliases` into the current template aliases of `template_id`
+    :param db: The database object
+    :param template_id: The ID of the template to append alias of
+    :param aliases: The aliases to append, as a list of STRING
+    :return: All the aliases after appending
+    """
+    query = """
+    UPDATE giveaway_gates_template SET alias=alias||$1 WHERE id=$2
+    """
+    if not all([isinstance(x, str) for x in aliases]):
+        raise TypeError(f'Not of the values in roles are string')
+    await db.execute(query, aliases, template_id)
+    ret_query = """
+    SELECT alias FROM giveaway_gates_template WHERE id=$1
+    """
+    res = await db.fetch(ret_query, template_id)
+    return res[0]['alias']
+
+
+async def remove_template_alias(db: asyncpg.pool.Pool, template_id: str, alias: str):
+    """
+    Removes an alias from a template
+    :param db: The database object.
+    :param template_id: The ID of the template to remove alias of
+    :param alias: The alias to remove
+    :return: All the aliases after removing
+    """
+    query = """
+    UPDATE giveaway_gates_template SET alias=ARRAY_REMOVE(alias, $1) WHERE id=$2
+    """
+    await db.execute(query, alias, template_id)
+
+
+async def add_template_role(db: asyncpg.pool.Pool, template_id: str, role_id: int):
+    """
+    Adds a role to a template
+    :param db: The database object
+    :param template_id: The ID of the template to add role to
+    :param role_id: The ID of the role to be added
+    :return: None
+    """
+    query = """
+    UPDATE giveaway_gates_template SET roles=ARRAY_APPEND(roles, $1) WHERE id=$2
+    """
+    await db.execute(query, role_id, template_id)
+
+
+async def remove_template_role(db: asyncpg.pool.Pool, template_id: str, role_id: int):
+    """
+    Removes a role from a template
+    :param db: The database object
+    :param template_id: The ID of the template to remove role of
+    :param role_id: The ID of the role to be removed
+    :return: None
+    """
+    query = """
+    UPDATE giveaway_gates_template SET roles=ARRAY_REMOVE(roles, $2) WHERE id=$1
+    """
+    await db.execute(query, template_id, role_id)
+
+
+async def purge_template_invalid_roles(db: asyncpg.pool.Pool, guild: discord.Guild, template_id: str):
+    """
+    Removes all invalid roles from a template
+    :param db: The database object.
+    :param guild: The guild object of the guild the roles are on
+    :param template_id: The ID of the template to remove invalid roles of
+    :return: The remaining roles
+    """
+    query = """
+    SELECT roles FROM giveaway_gates_template WHERE id=$1
+    """
+    res = (await db.fetch(query, template_id))[0]['roles']
+    kill_list = []
+    for i in res:
+        if not guild.get_role(i):
+            kill_list.append(i)
+    for j in kill_list:
+        res.remove(j)
+    update_query = """
+    UPDATE giveaway_gates_template SET roles=$1 WHERE id=$2
+    """
+    await db.execute(update_query, res, template_id)
+    return res

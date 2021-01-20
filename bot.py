@@ -48,7 +48,6 @@ sbg_base = ['598390820655071277', '604277350791774208', '599517945571573800', '6
             '783824492651872306', '778709363979845702', '787881953331249152', '787881958063341568',
             '787881962274684988', '787881966392442911', '787881970872746025']
 
-
 with open('token.json', 'r') as f:
     tokens = json.loads(f.read())
 
@@ -510,6 +509,7 @@ async def qualifycheck(ctx: commands.Context, channel: discord.TextChannel, mess
                 bombarded += 1
                 logging.info(f'Removed {str(ii.id)} from {str(message_id)}')
     await ctx.send(f'{bombarded} users have lost their chance to the giveaway, feelin\' good')
+
 
 @bot.command(name='reboot')
 @commands.is_owner()
