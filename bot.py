@@ -548,12 +548,13 @@ async def bombard(ctx: commands.Context):
 
 @gate.group(name='template', usage='template <subcommand>', description='Manage the gate templates',
             invoke_without_command=True)
-@commands.has_any_role(615756323589718046, 606228008134639636, 590693437922344960)
+@commands.has_any_role(615756323589718046, 606228008134639636, 590693437922344960, 637823625558229023)
 async def template(ctx):
     await ctx.send('Should you be using my sub-commands now?')
 
 
 @template.command(name='add', usage='add <template_id> <roles>')
+@commands.has_any_role(615756323589718046, 606228008134639636, 590693437922344960, 637823625558229023)
 async def add_template(ctx: commands.Context, template_id: str, *, roles: str):
     roles = await parse_requirements(roles)
     await db.add_gate_template(bot.db, template_id, roles)
@@ -563,18 +564,21 @@ async def add_template(ctx: commands.Context, template_id: str, *, roles: str):
 
 
 @template.command(name='remove', usage='remove <template_id>')
+@commands.has_any_role(615756323589718046, 606228008134639636, 590693437922344960, 637823625558229023)
 async def remove(ctx: commands.Context, template_id: str):
     await db.remove_gate_template(bot.db, template_id)
     await ctx.send('Template removed.')
 
 
 @template.command(name='alias', usage='alias <template_id> <aliases separated by space>')
+@commands.has_any_role(615756323589718046, 606228008134639636, 590693437922344960, 637823625558229023)
 async def alias(ctx: commands.Context, template_id: str, *, aliases: str):
     await db.add_template_alias(bot.db, template_id, aliases.split(' '))
     await ctx.send('Template aliased.')
 
 
 @template.command(name='unalias', usage='unalias <template_id> <aliases separated by space>')
+@commands.has_any_role(615756323589718046, 606228008134639636, 590693437922344960, 637823625558229023)
 async def unalias(ctx: commands.Context, template_id: str, *, aliases: str):
     for alias in aliases.split(' '):
         await db.remove_template_alias(bot.db, template_id, alias)
@@ -582,6 +586,7 @@ async def unalias(ctx: commands.Context, template_id: str, *, aliases: str):
 
 
 @template.command(name='addrole', usage='addrole <template_id> <roles>')
+@commands.has_any_role(615756323589718046, 606228008134639636, 590693437922344960, 637823625558229023)
 async def addrole(ctx: commands.Context, template_id: str, *, roles: str):
     await db.purge_template_invalid_roles(bot.db, ctx.guild, template_id)
     roles = await parse_requirements(roles)
@@ -593,6 +598,7 @@ async def addrole(ctx: commands.Context, template_id: str, *, roles: str):
 
 
 @template.command(name='removerole', usage='removerole <template_id> <roles>', aliases=['unrole', 'rmrole'])
+@commands.has_any_role(615756323589718046, 606228008134639636, 590693437922344960, 637823625558229023)
 async def rmrole(ctx: commands.Context, template_id: str, *, roles: str):
     await db.purge_template_invalid_roles(bot.db, ctx.guild, template_id)
     roles = await parse_requirements(roles)
