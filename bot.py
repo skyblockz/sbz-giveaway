@@ -558,7 +558,7 @@ async def add_template(ctx: commands.Context, template_id: str, *, roles: str):
     await db.add_gate_template(bot.db, template_id, roles)
     res = await db.get_gate_template(bot.db, template_id)
     await ctx.send(
-        f'Template {template_id} created with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}')
+        f'Template {template_id} created with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}', allowed_mentions=discord.AllowedMentions.none())
 
 
 @template.command(name='remove', usage='remove <template_id>')
@@ -588,7 +588,7 @@ async def addrole(ctx: commands.Context, template_id: str, *, roles: str):
         await db.add_template_role(bot.db, template_id, role)
     res = await db.get_gate_template(bot.db, template_id)
     await ctx.send(
-        f'Template {template_id} added roles now with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}')
+        f'Template {template_id} added roles now with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}', allowed_mentions=discord.AllowedMentions.none())
 
 
 @template.command(name='removerole', usage='removerole <template_id> <roles>', aliases=['unrole', 'rmrole'])
@@ -599,7 +599,7 @@ async def rmrole(ctx: commands.Context, template_id: str, *, roles: str):
         await db.remove_template_role(bot.db, template_id, role)
     res = await db.get_gate_template(bot.db, template_id)
     await ctx.send(
-        f'Template {template_id} removed roles now with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}')
+        f'Template {template_id} removed roles now with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}', allowed_mentions=discord.AllowedMentions.none())
 
 
 @bot.command(name='reboot')
