@@ -528,7 +528,7 @@ async def bombard(ctx: commands.Context):
                     bombarded += 1
                     continue
                 ii_roles = [iii.id for iii in ii.roles]
-                if not any(iii in ii_roles for iii in msg['requirements']):
+                if not any(iii in ii_roles for iii in gate['requirements']):
                     await i.remove(ii)
                     bombarded += 1
                     logging.info(f'Removed {str(ii.id)} from {str(msg.id)}')
