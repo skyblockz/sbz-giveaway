@@ -436,16 +436,18 @@ async def gate(ctx):
 
 async def parse_requirements(requirements: str):
     requirements = requirements.split(' ')
+    new_reqs = []
     for req in requirements:
-        if not req.isdigit():
-            res = await db.get_gate_template(bot.db, req)
-            if res is not None:
-                ind = requirements.index(req)
-                requirements.remove(req)
-                for i in range(len(res)):
-                    requirements.insert(i + ind, res[i])
-    requirements = [int(i) for i in requirements]
-    return requirements
+        if isinstance(req, str):
+            if not req.isdigit():
+                res = await db.get_gate_template(bot.db, req)
+                if res is not None:
+                    new_reqs.extend(res)
+            else:
+                new_reqs.append(int(req))
+        else:
+            new_reqs.append(req)
+    return new_reqs
 
 
 @gate.command(name='add', usage='gate add <channel> <message_id> <interval> <requirements>',
