@@ -511,6 +511,31 @@ async def qualifycheck(ctx: commands.Context, channel: discord.TextChannel, mess
     await ctx.send(f'{bombarded} users have lost their chance to the giveaway, feelin\' good')
 
 
+@gate.command(name='bombard', usage='bombard', description='Checks ALL the gates for the current server and remove those who don\'t qualify')
+@commands.has_any_role(593163327304237098, 764541727494504489, 637823625558229023, 598197239688724520)
+async def bombard(ctx: commands.Context):
+    gates = await db.list_gates(bot.db)
+    messages = []
+    for gate in gates:
+        bombarded = 0
+        msg = await bot.get_channel(gate['channel_id']).fetch_message(gate['id'])
+        for i in msg.reactions:
+            async for ii in i.users():
+                if ii.bot:
+                    continue
+                if isinstance(ii, discord.User):
+                    await i.remove(ii)
+                    bombarded += 1
+                    continue
+                ii_roles = [iii.id for iii in ii.roles]
+                if not any(iii in ii_roles for iii in msg['requirements']):
+                    await i.remove(ii)
+                    bombarded += 1
+                    logging.info(f'Removed {str(ii.id)} from {str(msg.id)}')
+        messages.append(f'Removed {bombarded} people from {msg.jump_url}')
+    await ctx.send('\n'.join(messages))
+
+
 @bot.command(name='reboot')
 @commands.is_owner()
 async def reboot(ctx):

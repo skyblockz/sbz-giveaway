@@ -298,6 +298,18 @@ async def search_gate(db: asyncpg.pool.Pool, channel_id: int, message_id: int):
     return dict(res[0])
 
 
+async def list_gates(db: asyncpg.pool.Pool):
+    """
+    Lists all the gates in the database
+    :param db: The database object
+    :return: A list of all the gates in the database
+    """
+    query = """
+    SELECT * FROM giveaway_gates
+    """
+    return await db.fetch(query)
+
+
 async def remove_gate(db: asyncpg.pool.Pool, channel_id: int, message_id: int):
     """
     Removes a gate from message_id
