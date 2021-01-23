@@ -434,9 +434,16 @@ async def gate(ctx):
         'You shall be using some other commands, instead of this one, think about what you could have done in this 3 seconds typing and wating for this message to appear...')
 
 
-def parse_requirements(requirements: str):
-    requirements = requirements.replace('sbg', ' '.join(sbg_base))
+async def parse_requirements(requirements: str):
     requirements = requirements.split(' ')
+    for req in requirements:
+        if not req.isdigit():
+            res = await db.get_gate_template(bot.db, req)
+            if res is not None:
+                ind = requirements.index(req)
+                requirements.remove(req)
+                for i in range(len(res)):
+                    requirements.insert(i + ind, res[i])
     requirements = [int(i) for i in requirements]
     return requirements
 
@@ -447,7 +454,7 @@ def parse_requirements(requirements: str):
 async def add(ctx: commands.Context, channel: discord.TextChannel, message_id: int, interval: str, *,
               requirements: str):
     interval = int(convert_time(interval))
-    requirements = parse_requirements(requirements)
+    requirements = await parse_requirements(requirements)
     try:
         await db.add_gate(bot.db, channel.id, message_id, interval, requirements)
     except asyncpg.UniqueViolationError:
@@ -475,7 +482,7 @@ async def add(ctx: commands.Context, channel: discord.TextChannel, message_id: i
               description='Changes the requirement gate of message to new_requirements')
 @commands.has_any_role(593163327304237098, 764541727494504489, 637823625558229023, 598197239688724520)
 async def modify(ctx: commands.Context, channel: discord.TextChannel, message_id: int, new_requirements: str):
-    pr = parse_requirements(new_requirements)
+    pr = await parse_requirements(new_requirements)
     await db.modify_gate(bot.db, channel.id, message_id, pr)
     req_ping = [f'<@&{i}>' for i in pr]
     await ctx.send(f'Gate modified, with the new requirements: {" ".join(req_ping)}',
@@ -511,7 +518,8 @@ async def qualifycheck(ctx: commands.Context, channel: discord.TextChannel, mess
     await ctx.send(f'{bombarded} users have lost their chance to the giveaway, feelin\' good')
 
 
-@gate.command(name='bombard', usage='bombard', description='Checks ALL the gates for the current server and remove those who don\'t qualify')
+@gate.command(name='bombard', usage='bombard',
+              description='Checks ALL the gates for the current server and remove those who don\'t qualify')
 @commands.has_any_role(593163327304237098, 764541727494504489, 637823625558229023, 598197239688724520)
 async def bombard(ctx: commands.Context):
     gates = await db.list_gates(bot.db)
@@ -534,6 +542,62 @@ async def bombard(ctx: commands.Context):
                     logging.info(f'Removed {str(ii.id)} from {str(msg.id)}')
         messages.append(f'Removed {bombarded} people from {msg.jump_url}')
     await ctx.send('\n'.join(messages))
+
+
+@gate.group(name='template', usage='template <subcommand>', description='Manage the gate templates',
+            invoke_without_command=True)
+async def template(ctx):
+    await ctx.send('Should you be using my sub-commands now?')
+
+
+@template.command(name='add', usage='add <template_id> <roles>')
+async def add_template(ctx: commands.Context, template_id: str, roles: str):
+    roles = await parse_requirements(roles)
+    await db.add_gate_template(bot.db, template_id, roles)
+    res = await db.get_gate_template(bot.db, template_id)
+    await ctx.send(
+        f'Template {template_id} created with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}')
+
+
+@template.command(name='remove', usage='remove <template_id>')
+async def remove(ctx: commands.Context, template_id: str):
+    await db.remove_gate_template(bot.db, template_id)
+    await ctx.send('Template removed.')
+
+
+@template.command(name='alias', usage='alias <template_id> <aliases separated by space>')
+async def alias(ctx: commands.Context, template_id: str, aliases: str):
+    await db.add_template_alias(bot.db, template_id, aliases.split(' '))
+    await ctx.send('Template aliased.')
+
+
+@template.command(name='unalias', usage='unalias <template_id> <aliases separated by space>')
+async def unalias(ctx: commands.Context, template_id: str, aliases: str):
+    for alias in aliases.split(' '):
+        await db.remove_template_alias(bot.db, template_id, alias)
+    await ctx.send(f'Alias{"es" if len(aliases.split(" ")) > 1 else ""} removed.')
+
+
+@template.command(name='addrole', usage='addrole <template_id> <roles>')
+async def addrole(ctx: commands.Context, template_id: str, roles: str):
+    await db.purge_template_invalid_roles(bot.db, ctx.guild, template_id)
+    roles = await parse_requirements(roles)
+    for role in roles:
+        await db.add_template_role(bot.db, template_id, role)
+    res = await db.get_gate_template(bot.db, template_id)
+    await ctx.send(
+        f'Template {template_id} added roles now with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}')
+
+
+@template.command(name='removerole', usage='removerole <template_id> <roles>', aliases=['unrole', 'rmrole'])
+async def rmrole(ctx: commands.Context, template_id: str, roles: str):
+    await db.purge_template_invalid_roles(bot.db, ctx.guild, template_id)
+    roles = await parse_requirements(roles)
+    for role in roles:
+        await db.remove_template_role(bot.db, template_id, role)
+    res = await db.get_gate_template(bot.db, template_id)
+    await ctx.send(
+        f'Template {template_id} removed roles now with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}')
 
 
 @bot.command(name='reboot')
