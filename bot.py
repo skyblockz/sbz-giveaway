@@ -548,6 +548,7 @@ async def bombard(ctx: commands.Context):
 
 @gate.group(name='template', usage='template <subcommand>', description='Manage the gate templates',
             invoke_without_command=True)
+@commands.has_any_role(615756323589718046, 606228008134639636, 590693437922344960)
 async def template(ctx):
     await ctx.send('Should you be using my sub-commands now?')
 
