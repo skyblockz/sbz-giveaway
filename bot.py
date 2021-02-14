@@ -546,6 +546,19 @@ async def bombard(ctx: commands.Context):
     await ctx.send('\n'.join(messages))
 
 
+@gate.command(name='purgeinvalid', usage='purgeinvalid', description='Pruges invalid gates', aliases=['pi'])
+async def purge_invalid(ctx):
+    gates = await db.list_gates(bot.db)
+    removed = []
+    for gate in gates:
+        try:
+            await bot.get_channel(gate['channel_id']).fetch_message(gate['id'])
+        except discord.NotFound:
+            removed.append(
+                f'Removed {gate["id"]} at {bot.get_channel(gate["channel_id"]).mention} with the following roles: {" ".join(["<@&" + str(i) + ">" for i in gate["requirements"]])}')
+    await ctx.send("\n".join(removed))
+
+
 @gate.group(name='template', usage='template <subcommand>', description='Manage the gate templates',
             invoke_without_command=True)
 @commands.has_any_role(615756323589718046, 606228008134639636, 590693437922344960, 637823625558229023)
@@ -560,7 +573,8 @@ async def add_template(ctx: commands.Context, template_id: str, *, roles: str):
     await db.add_gate_template(bot.db, template_id, roles)
     res = await db.get_gate_template(bot.db, template_id)
     await ctx.send(
-        f'Template {template_id} created with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}', allowed_mentions=discord.AllowedMentions.none())
+        f'Template {template_id} created with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}',
+        allowed_mentions=discord.AllowedMentions.none())
 
 
 @template.command(name='remove', usage='remove <template_id>')
@@ -594,7 +608,8 @@ async def addrole(ctx: commands.Context, template_id: str, *, roles: str):
         await db.add_template_role(bot.db, template_id, role)
     res = await db.get_gate_template(bot.db, template_id)
     await ctx.send(
-        f'Template {template_id} added roles now with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}', allowed_mentions=discord.AllowedMentions.none())
+        f'Template {template_id} added roles now with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}',
+        allowed_mentions=discord.AllowedMentions.none())
 
 
 @template.command(name='removerole', usage='removerole <template_id> <roles>', aliases=['unrole', 'rmrole'])
@@ -606,7 +621,8 @@ async def rmrole(ctx: commands.Context, template_id: str, *, roles: str):
         await db.remove_template_role(bot.db, template_id, role)
     res = await db.get_gate_template(bot.db, template_id)
     await ctx.send(
-        f'Template {template_id} removed roles now with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}', allowed_mentions=discord.AllowedMentions.none())
+        f'Template {template_id} removed roles now with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}',
+        allowed_mentions=discord.AllowedMentions.none())
 
 
 @bot.command(name='reboot')
