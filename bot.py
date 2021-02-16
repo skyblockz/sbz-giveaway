@@ -616,7 +616,7 @@ async def rmrole(ctx: commands.Context, template_id: str, *, roles: str):
 async def getroles(ctx: commands.Context, template_id: str):
     roles = await db.get_gate_template(bot.db, template_id)
     roles = [f'<@&{x}>' for x in roles]
-    await ctx.send(f'Template {template_id} has the following roles: {" ".join(roles)}')
+    await ctx.send(f'Template {template_id} has the following roles: {" ".join(roles)}', allowed_mentions=discord.AllowedMentions.none())
 
 @bot.command(name='reboot')
 @commands.is_owner()
