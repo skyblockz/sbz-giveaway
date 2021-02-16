@@ -610,7 +610,13 @@ async def rmrole(ctx: commands.Context, template_id: str, *, roles: str):
     await ctx.send(
         f'Template {template_id} removed roles now with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}',
         allowed_mentions=discord.AllowedMentions.none())
-
+        
+        
+@template.command(name='get', usage='get <template_id>')
+async def getroles(ctx: commands.Context, template_id: str):
+    roles = await db.get_gate_template(bot.db, template_id)
+    roles = [f'<@&{x}>' for x in roles]
+    await ctx.send(f'Template {template_id} has the following roles: {" ".join(roles)}')
 
 @bot.command(name='reboot')
 @commands.is_owner()
