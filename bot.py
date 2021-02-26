@@ -27,7 +27,7 @@ class SBZGiveawayBot(commands.Bot):
 
 
 intents = discord.Intents.all()
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 bot = SBZGiveawayBot(command_prefix='g$', intents=intents)
 bot.load_extension('jishaku')
 tada_emoji = '\U0001f389'
