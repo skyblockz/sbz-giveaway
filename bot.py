@@ -63,16 +63,16 @@ def convert_time(raw):
 @bot.event
 async def on_connect():
     if not bot.loaded_db:
-        logging.info('LOADED DATABASE')
+        logging.warning('LOADED DATABASE')
         bot.db = await asyncpg.create_pool(**tokens['pgsql'])
         await db.ensure_database_validity(bot.db)
         bot.loaded_db = True
-    print('Connected')
+    logging.warning('Connected')
 
 
 @bot.event
 async def on_ready():
-    print('Ready')
+    logging.warning('Ready')
 
 
 @bot.event
