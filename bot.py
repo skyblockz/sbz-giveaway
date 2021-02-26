@@ -544,7 +544,7 @@ async def purge_invalid(ctx):
             await db.remove_gate(bot.db, gate['channel_id'], gate['id'])
             removed.append(
                 f'Removed {gate["id"]} at {bot.get_channel(gate["channel_id"]).mention} with the following roles: {" ".join(["<@&" + str(i) + ">" for i in gate["requirements"]])}')
-    await ctx.send("\n".join(removed))
+    await ctx.send("\n".join(removed),allowed_mentions=discord.AllowedMentions.none())
 
 
 @gate.group(name='template', usage='template <subcommand>', description='Manage the gate templates',
