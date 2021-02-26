@@ -541,6 +541,7 @@ async def purge_invalid(ctx):
         try:
             await bot.get_channel(gate['channel_id']).fetch_message(gate['id'])
         except discord.NotFound:
+            await db.remove_gate(bot.db, gate['channel_id'], gate['id'])
             removed.append(
                 f'Removed {gate["id"]} at {bot.get_channel(gate["channel_id"]).mention} with the following roles: {" ".join(["<@&" + str(i) + ">" for i in gate["requirements"]])}')
     await ctx.send("\n".join(removed))
