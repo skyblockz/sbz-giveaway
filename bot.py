@@ -633,7 +633,7 @@ async def template_list(ctx: commands.Context):
 @commands.is_owner()
 async def reboot(ctx):
     await ctx.send('Shutting down...')
-    await bot.logout()
+    await bot.close()
 
 
 check_giveaways.start()
