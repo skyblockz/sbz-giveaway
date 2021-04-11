@@ -625,7 +625,7 @@ async def getroles(ctx: commands.Context, template_id: str):
 async def template_list(ctx: commands.Context):
     msg = ''
     for template in await db.list_templates(bot.db):
-        roles = [f'<@&{r}>' for r in template['role']]
+        roles = [f'<@&{r}>' for r in template['roles']]
         msg += f'`{template["id"]}` -> {",".join(roles)}\n'
 
 
