@@ -512,3 +512,15 @@ async def purge_template_invalid_roles(db: asyncpg.pool.Pool, guild: discord.Gui
     """
     await db.execute(update_query, res, template_id)
     return res
+
+
+async def list_templates(db: asyncpg.pool.Pool):
+    """
+    Returns a list of templates in the database
+    :param db: The database object
+    :return: A list of templates
+    """
+    query = """
+    SELECT * FROM giveaway_gates_template
+    """
+    return list(await db.fetch(query))

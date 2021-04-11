@@ -624,6 +624,13 @@ async def rmrole(ctx: commands.Context, template_id: str, *, roles: str):
         f'Template {template_id} removed roles now with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}',
         allowed_mentions=discord.AllowedMentions.none())
 
+@template.command(name='list', usage='list')
+@commands.has_any_role(615756323589718046, 606228008134639636, 590693437922344960, 637823625558229023)
+async def template_list(ctx: commands.Context):
+    msg = ''
+    for template in await db.list_templates(bot.db):
+        roles = [f'<@&{r}>' for r in template['role']]
+        msg+=f'`{template["id"]}` -> {",".join(roles)}\n'
 
 @bot.command(name='reboot')
 @commands.is_owner()
