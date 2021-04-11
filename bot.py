@@ -627,6 +627,7 @@ async def template_list(ctx: commands.Context):
     for template in await db.list_templates(bot.db):
         roles = [f'<@&{r}>' for r in template['roles']]
         msg += f'`{template["id"]}` -> {",".join(roles)}\n'
+    await ctx.send(msg, allowed_mentions=discord.AllowedMentions.none())
 
 
 @bot.command(name='reboot')
