@@ -27,26 +27,13 @@ class SBZGiveawayBot(commands.Bot):
 
 
 intents = discord.Intents.all()
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 bot = SBZGiveawayBot(command_prefix='g$', intents=intents)
 bot.load_extension('jishaku')
 tada_emoji = '\U0001f389'
 repo = git.Repo('.')
 bot.msg_sent = {}
-sbg_base = ['598390820655071277', '604277350791774208', '599517945571573800', '674788690614026279',
-            '602627694332477440', '640708611097493561', '600259912022360117', '732020286760681594',
-            '593203392524976138', '593163327304237098', '658462156391448586', '686404956164456670',
-            '593161930273849354', '743545013463679117', '594951070568939553', '596113518835531827',
-            '596561055485001758', '596950202502479888', '596951779724492813', '646282949704024065',
-            '646281623347789834', '592794714051182602', '594010023496122384', '611414047446794270',
-            '597071614756126720', '620863493452726272', '630839251038109707', '718494182427197511',
-            '695355671037870082', '695355722665558058', '695355725408632911', '695355727589539983',
-            '695355730412306454', '747024592471588887', '747023898406682624', '747024582820495411',
-            '747024586025074739', '776556977047339068', '782649526912942090', '782649542604619807',
-            '782649534429003776', '782649530649804850', '782649538778628157', '782649547645911061',
-            '717618429728784454', '693272417224622141', '695900911389638666', '751928992092651591',
-            '783824492651872306', '778709363979845702', '787881953331249152', '787881958063341568',
-            '787881962274684988', '787881966392442911', '787881970872746025']
+
 
 with open('token.json', 'r') as f:
     tokens = json.loads(f.read())
@@ -76,16 +63,16 @@ def convert_time(raw):
 @bot.event
 async def on_connect():
     if not bot.loaded_db:
-        logging.info('LOADED DATABASE')
+        logging.warning('LOADED DATABASE')
         bot.db = await asyncpg.create_pool(**tokens['pgsql'])
         await db.ensure_database_validity(bot.db)
         bot.loaded_db = True
-    print('Connected')
+    logging.warning('Connected')
 
 
 @bot.event
 async def on_ready():
-    print('Ready')
+    logging.warning('Ready')
 
 
 @bot.event
@@ -554,9 +541,10 @@ async def purge_invalid(ctx):
         try:
             await bot.get_channel(gate['channel_id']).fetch_message(gate['id'])
         except discord.NotFound:
+            await db.remove_gate(bot.db, gate['channel_id'], gate['id'])
             removed.append(
                 f'Removed {gate["id"]} at {bot.get_channel(gate["channel_id"]).mention} with the following roles: {" ".join(["<@&" + str(i) + ">" for i in gate["requirements"]])}')
-    await ctx.send("\n".join(removed))
+    await ctx.send("\n".join(removed),allowed_mentions=discord.AllowedMentions.none())
 
 
 @gate.group(name='template', usage='template <subcommand>', description='Manage the gate templates',
@@ -623,6 +611,13 @@ async def rmrole(ctx: commands.Context, template_id: str, *, roles: str):
     await ctx.send(
         f'Template {template_id} removed roles now with the following roles: {" ".join(["<@&" + str(i) + ">" for i in res])}',
         allowed_mentions=discord.AllowedMentions.none())
+
+
+@template.command(name='get', usage='get <template_id>')
+async def getroles(ctx: commands.Context, template_id: str):
+    roles = await db.get_gate_template(bot.db, template_id)
+    roles = [f'<@&{x}>' for x in roles]
+    await ctx.send(f'Template {template_id} has the following roles: {" ".join(roles)}', allowed_mentions=discord.AllowedMentions.none())
 
 @template.command(name='list', usage='list')
 @commands.has_any_role(615756323589718046, 606228008134639636, 590693437922344960, 637823625558229023)
