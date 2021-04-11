@@ -34,7 +34,6 @@ tada_emoji = '\U0001f389'
 repo = git.Repo('.')
 bot.msg_sent = {}
 
-
 with open('token.json', 'r') as f:
     tokens = json.loads(f.read())
 
@@ -544,7 +543,7 @@ async def purge_invalid(ctx):
             await db.remove_gate(bot.db, gate['channel_id'], gate['id'])
             removed.append(
                 f'Removed {gate["id"]} at {bot.get_channel(gate["channel_id"]).mention} with the following roles: {" ".join(["<@&" + str(i) + ">" for i in gate["requirements"]])}')
-    await ctx.send("\n".join(removed),allowed_mentions=discord.AllowedMentions.none())
+    await ctx.send("\n".join(removed), allowed_mentions=discord.AllowedMentions.none())
 
 
 @gate.group(name='template', usage='template <subcommand>', description='Manage the gate templates',
@@ -617,7 +616,9 @@ async def rmrole(ctx: commands.Context, template_id: str, *, roles: str):
 async def getroles(ctx: commands.Context, template_id: str):
     roles = await db.get_gate_template(bot.db, template_id)
     roles = [f'<@&{x}>' for x in roles]
-    await ctx.send(f'Template {template_id} has the following roles: {" ".join(roles)}', allowed_mentions=discord.AllowedMentions.none())
+    await ctx.send(f'Template {template_id} has the following roles: {" ".join(roles)}',
+                   allowed_mentions=discord.AllowedMentions.none())
+
 
 @template.command(name='list', usage='list')
 @commands.has_any_role(615756323589718046, 606228008134639636, 590693437922344960, 637823625558229023)
@@ -625,7 +626,8 @@ async def template_list(ctx: commands.Context):
     msg = ''
     for template in await db.list_templates(bot.db):
         roles = [f'<@&{r}>' for r in template['role']]
-        msg+=f'`{template["id"]}` -> {",".join(roles)}\n'
+        msg += f'`{template["id"]}` -> {",".join(roles)}\n'
+
 
 @bot.command(name='reboot')
 @commands.is_owner()
